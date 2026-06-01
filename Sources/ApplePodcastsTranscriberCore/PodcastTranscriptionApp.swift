@@ -127,7 +127,7 @@ public struct PodcastTranscriptionApp {
         if options.listOnly {
             output("Date | Episode Title | Audio File")
             for episode in episodes {
-                output("\(formatDate(episode.episodeDate)) | \(episode.episodeName) | \(episode.audioFile.url.path)")
+                output("\(episode.formattedDate ?? "undated") | \(episode.episodeName) | \(episode.audioFile.url.path)")
             }
             return
         }
@@ -144,9 +144,9 @@ public struct PodcastTranscriptionApp {
         }
 
         for episode in episodes {
-            let transcriptURL = transcriptStore.transcriptURL(for: episode.episodeName, date: episode.episodeDate)
+            let transcriptURL = transcriptStore.transcriptURL(for: episode.episodeName, date: episode.formattedDate)
 
-            if transcriptStore.transcriptExists(for: episode.episodeName, date: episode.episodeDate), !options.force {
+            if transcriptStore.transcriptExists(for: episode.episodeName, date: episode.formattedDate), !options.force {
                 skippedCount += 1
                 output("Skipping existing transcript: \(episode.episodeName) -> \(transcriptURL.path)")
                 continue
@@ -155,7 +155,7 @@ public struct PodcastTranscriptionApp {
             do {
                 output("Transcribing: \(episode.episodeName)")
                 let text = try transcriber.transcribe(episode: episode, language: options.language)
-                let writtenURL = try transcriptStore.write(text, for: episode.episodeName, date: episode.episodeDate)
+                let writtenURL = try transcriptStore.write(text, for: episode.episodeName, date: episode.formattedDate)
                 transcribedCount += 1
                 output("Wrote: \(writtenURL.path)")
             } catch {
@@ -185,13 +185,4 @@ public struct PodcastTranscriptionApp {
         output("Done. Deleted: \(result.deletedURLs.count). Failed: \(result.failures.count).")
     }
 
-    private func formatDate(_ date: Date?) -> String {
-        guard let date else {
-            return "undated"
-        }
-
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withFullDate]
-        return formatter.string(from: date)
-    }
 }

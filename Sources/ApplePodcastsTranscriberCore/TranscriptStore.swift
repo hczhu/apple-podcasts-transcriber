@@ -13,16 +13,16 @@ public struct TranscriptStore {
         self.fileManager = fileManager
     }
 
-    public func transcriptURL(for episodeName: String, date: Date?) -> URL {
+    public func transcriptURL(for episodeName: String, date: String?) -> URL {
         outputDirectory.appendingPathComponent(Self.safeFilename(for: episodeName, date: date))
     }
 
-    public func transcriptExists(for episodeName: String, date: Date?) -> Bool {
+    public func transcriptExists(for episodeName: String, date: String?) -> Bool {
         fileManager.fileExists(atPath: transcriptURL(for: episodeName, date: date).path)
     }
 
     @discardableResult
-    public func write(_ text: String, for episodeName: String, date: Date?) throws -> URL {
+    public func write(_ text: String, for episodeName: String, date: String?) throws -> URL {
         try fileManager.createDirectory(
             at: outputDirectory,
             withIntermediateDirectories: true
@@ -33,7 +33,7 @@ public struct TranscriptStore {
         return outputURL
     }
 
-    public static func safeFilename(for episodeName: String, date: Date?) -> String {
+    public static func safeFilename(for episodeName: String, date: String?) -> String {
         var name = episodeName
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .components(separatedBy: .whitespacesAndNewlines)
@@ -58,9 +58,7 @@ public struct TranscriptStore {
         let title = sanitized.isEmpty ? "Untitled Episode" : sanitized
 
         if let date {
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withFullDate]
-            return "\(formatter.string(from: date)) - \(title).txt"
+            return "\(date) - \(title).txt"
         }
         return "\(title).txt"
     }

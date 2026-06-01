@@ -10,13 +10,8 @@ final class TranscriptStoreTests: XCTestCase {
     }
 
     func testSafeFilenameWithDate() {
-        var components = DateComponents()
-        components.year = 2024
-        components.month = 3
-        components.day = 7
-        let date = Calendar(identifier: .gregorian).date(from: components)!
         XCTAssertEqual(
-            TranscriptStore.safeFilename(for: "The Big Episode", date: date),
+            TranscriptStore.safeFilename(for: "The Big Episode", date: "2024-03-07"),
             "2024-03-07 - The Big Episode.txt"
         )
     }

@@ -10,6 +10,13 @@ public struct PodcastEpisode: Equatable {
         self.episodeName = episodeName
         self.episodeDate = episodeDate
     }
+
+    public var formattedDate: String? {
+        guard let episodeDate else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        return formatter.string(from: episodeDate)
+    }
 }
 
 public struct EpisodeMetadata: Equatable {
