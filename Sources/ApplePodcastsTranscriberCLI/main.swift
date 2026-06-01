@@ -1,5 +1,18 @@
 import ApplePodcastsTranscriberCore
+import Darwin
 import Foundation
+
+signal(SIGINT) { _ in
+    let pid = activeTranscriptionPID
+    if pid != 0 { kill(pid, SIGTERM) }
+    signal(SIGINT, SIG_DFL)
+    raise(SIGINT)
+}
+signal(SIGTERM) { _ in
+    let pid = activeTranscriptionPID
+    if pid != 0 { kill(pid, SIGTERM) }
+    exit(143)
+}
 
 enum CLIError: LocalizedError {
     case missingValue(String)

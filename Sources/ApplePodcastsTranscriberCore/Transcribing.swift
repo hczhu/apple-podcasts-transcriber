@@ -1,4 +1,9 @@
+import Darwin
 import Foundation
+
+/// PID of the whisper-cli subprocess currently running; 0 when idle.
+/// Read by signal handlers in the CLI target to kill the child on early exit.
+public var activeTranscriptionPID: pid_t = 0
 
 public protocol Transcribing {
     func transcribe(episode: PodcastEpisode, language: String?) throws -> String
@@ -77,6 +82,8 @@ public struct LocalWhisperTranscriber: Transcribing {
         process.standardError = FileHandle.standardError
 
         try process.run()
+        activeTranscriptionPID = process.processIdentifier
+        defer { activeTranscriptionPID = 0 }
         process.waitUntilExit()
 
         guard process.terminationStatus == 0 else {
