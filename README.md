@@ -1,7 +1,7 @@
 # apple-podcasts-transcriber
 
 A macOS-first Swift project for finding downloaded Apple Podcasts episodes and
-transcribing them with a local model.
+transcribing them with a local model ([Whisper.cpp](https://github.com/ggml-org/whisper.cpp))
 
 The current implementation automatically finds all downloaded Apple Podcasts, orders episodes newest first, skips transcripts that already exist, and exposes local and OpenAI-compatible transcription backends.
 
