@@ -86,15 +86,17 @@ public struct LocalWhisperTranscriber: Transcribing {
         defer { activeTranscriptionPID = 0 }
         process.waitUntilExit()
 
-        guard process.terminationStatus == 0 else {
+        let transcriptURL = outputPrefix.appendingPathExtension("txt")
+
+        if process.terminationStatus != 0, !fileManager.fileExists(atPath: transcriptURL.path) {
             throw TranscriptionError.processFailed(
                 status: process.terminationStatus,
                 output: ""
             )
         }
 
-        let transcriptURL = outputPrefix.appendingPathExtension("txt")
-        return try String(contentsOf: transcriptURL, encoding: .utf8)
+        let data = try Data(contentsOf: transcriptURL)
+        return String(data: data, encoding: .utf8) ?? String(decoding: data, as: UTF8.self)
     }
 }
 
