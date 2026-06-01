@@ -125,8 +125,8 @@ if [[ -z "${WHISPER_SOURCE_PATH}" ]]; then
 fi
 
 mkdir -p "${WHISPER_DIR}"
-log "Installing whisper-cli to ${WHISPER_BINARY_PATH}"
-install -m 0755 "${WHISPER_SOURCE_PATH}" "${WHISPER_BINARY_PATH}"
+log "Symlinking whisper-cli to ${WHISPER_BINARY_PATH}"
+ln -sf "${WHISPER_SOURCE_PATH}" "${WHISPER_BINARY_PATH}"
 
 if [[ "${SKIP_MODEL}" -eq 0 ]]; then
   mkdir -p "${MODEL_DIR}"
