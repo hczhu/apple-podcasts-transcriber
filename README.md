@@ -3,9 +3,7 @@
 A macOS-first Swift project for finding downloaded Apple Podcasts episodes and
 transcribing them with a local model.
 
-The current implementation scans a hard-coded Apple Podcasts library path,
-orders episodes newest first, skips transcripts that already exist, and exposes
-local and OpenAI-compatible transcription backends.
+The current implementation automatically finds all downloaded Apple Podcasts, orders episodes newest first, skips transcripts that already exist, and exposes local and OpenAI-compatible transcription backends.
 
 If multiple downloaded audio files resolve to the same episode title, the app
 keeps the newest one for transcription and skips the duplicates to avoid
