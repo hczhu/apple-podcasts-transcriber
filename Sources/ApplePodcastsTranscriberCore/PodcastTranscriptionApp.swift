@@ -144,9 +144,9 @@ public struct PodcastTranscriptionApp {
         }
 
         for episode in episodes {
-            let transcriptURL = transcriptStore.transcriptURL(for: episode.episodeName)
+            let transcriptURL = transcriptStore.transcriptURL(for: episode.episodeName, date: episode.episodeDate)
 
-            if transcriptStore.transcriptExists(for: episode.episodeName), !options.force {
+            if transcriptStore.transcriptExists(for: episode.episodeName, date: episode.episodeDate), !options.force {
                 skippedCount += 1
                 output("Skipping existing transcript: \(episode.episodeName) -> \(transcriptURL.path)")
                 continue
@@ -155,7 +155,7 @@ public struct PodcastTranscriptionApp {
             do {
                 output("Transcribing: \(episode.episodeName)")
                 let text = try transcriber.transcribe(episode: episode, language: options.language)
-                let writtenURL = try transcriptStore.write(text, for: episode.episodeName)
+                let writtenURL = try transcriptStore.write(text, for: episode.episodeName, date: episode.episodeDate)
                 transcribedCount += 1
                 output("Wrote: \(writtenURL.path)")
             } catch {

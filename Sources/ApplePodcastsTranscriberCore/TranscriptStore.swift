@@ -13,27 +13,27 @@ public struct TranscriptStore {
         self.fileManager = fileManager
     }
 
-    public func transcriptURL(for episodeName: String) -> URL {
-        outputDirectory.appendingPathComponent(Self.safeFilename(for: episodeName))
+    public func transcriptURL(for episodeName: String, date: Date?) -> URL {
+        outputDirectory.appendingPathComponent(Self.safeFilename(for: episodeName, date: date))
     }
 
-    public func transcriptExists(for episodeName: String) -> Bool {
-        fileManager.fileExists(atPath: transcriptURL(for: episodeName).path)
+    public func transcriptExists(for episodeName: String, date: Date?) -> Bool {
+        fileManager.fileExists(atPath: transcriptURL(for: episodeName, date: date).path)
     }
 
     @discardableResult
-    public func write(_ text: String, for episodeName: String) throws -> URL {
+    public func write(_ text: String, for episodeName: String, date: Date?) throws -> URL {
         try fileManager.createDirectory(
             at: outputDirectory,
             withIntermediateDirectories: true
         )
 
-        let outputURL = transcriptURL(for: episodeName)
+        let outputURL = transcriptURL(for: episodeName, date: date)
         try text.write(to: outputURL, atomically: true, encoding: .utf8)
         return outputURL
     }
 
-    public static func safeFilename(for episodeName: String) -> String {
+    public static func safeFilename(for episodeName: String, date: Date?) -> String {
         var name = episodeName
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .components(separatedBy: .whitespacesAndNewlines)
@@ -55,7 +55,13 @@ public struct TranscriptStore {
             .replacingOccurrences(of: "--+", with: "-", options: .regularExpression)
             .trimmingCharacters(in: CharacterSet(charactersIn: ". "))
 
-        let filename = sanitized.isEmpty ? "Untitled Episode" : sanitized
-        return "\(filename).txt"
+        let title = sanitized.isEmpty ? "Untitled Episode" : sanitized
+
+        if let date {
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withFullDate]
+            return "\(formatter.string(from: date)) - \(title).txt"
+        }
+        return "\(title).txt"
     }
 }
