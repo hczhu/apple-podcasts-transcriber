@@ -64,7 +64,8 @@ public struct LocalWhisperTranscriber: Transcribing {
             "-m", modelURL.path,
             "-f", episode.audioFile.url.path,
             "-otxt",
-            "-of", outputPrefix.path
+            "-of", outputPrefix.path,
+            "-pp"
         ]
 
         if let language, !language.isEmpty {
@@ -72,23 +73,16 @@ public struct LocalWhisperTranscriber: Transcribing {
         }
 
         process.arguments = arguments
-
-        let outputPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = outputPipe
+        // Let stderr stream directly to the terminal so progress is visible in real-time.
+        process.standardError = FileHandle.standardError
 
         try process.run()
         process.waitUntilExit()
 
-        let processOutput = String(
-            data: outputPipe.fileHandleForReading.readDataToEndOfFile(),
-            encoding: .utf8
-        ) ?? ""
-
         guard process.terminationStatus == 0 else {
             throw TranscriptionError.processFailed(
                 status: process.terminationStatus,
-                output: processOutput
+                output: ""
             )
         }
 
