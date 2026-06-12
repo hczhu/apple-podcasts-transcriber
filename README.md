@@ -155,8 +155,18 @@ By default, transcripts are written to:
 ~/Documents/Apple Podcast Transcripts/
 ```
 
-Transcript filenames are determined only by episode name. Existing transcript
-files are skipped unless `--force` is used.
+Transcript filenames use the format `YYYY-MM-DD - Episode Title.txt`. Existing
+transcript files are skipped unless `--force` is used.
+
+## macOS Privacy Permissions
+
+The app reads the Apple Podcasts group container, which is protected by macOS.
+Your terminal will prompt for access on the first run. To avoid repeated prompts,
+grant Full Disk Access to your terminal app once:
+
+**System Settings → Privacy & Security → Full Disk Access → add your terminal**
+
+After granting access, the permission dialog will not appear again.
 
 ## Local Backend
 
