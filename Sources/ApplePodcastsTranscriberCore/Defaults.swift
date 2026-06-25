@@ -44,4 +44,28 @@ public enum AppDefaults {
 
         return candidates
     }
+
+    public static func resolvedFFmpegURL(fileManager: FileManager = .default) -> URL {
+        for candidate in ffmpegCandidates(fileManager: fileManager) {
+            if fileManager.fileExists(atPath: candidate.path) {
+                return candidate
+            }
+        }
+        return URL(fileURLWithPath: "/usr/local/bin/ffmpeg")
+    }
+
+    private static func ffmpegCandidates(fileManager: FileManager) -> [URL] {
+        var candidates: [URL] = []
+
+        if let override = ProcessInfo.processInfo.environment["APPLE_PODCASTS_TRANSCRIBER_FFMPEG"] {
+            candidates.append(URL(fileURLWithPath: override))
+        }
+
+        candidates.append(contentsOf: [
+            URL(fileURLWithPath: "/opt/homebrew/bin/ffmpeg"),
+            URL(fileURLWithPath: "/usr/local/bin/ffmpeg")
+        ])
+
+        return candidates
+    }
 }

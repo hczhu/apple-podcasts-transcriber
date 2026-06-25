@@ -17,6 +17,7 @@ public enum TranscriptionBackend: String {
 public enum TranscriptionError: LocalizedError, Equatable {
     case missingLocalBinary(String)
     case missingLocalModel(String)
+    case missingFFmpegBinary(String)
     case missingAPIKey(String)
     case invalidAPIResponse
     case processFailed(status: Int32, output: String)
@@ -27,6 +28,8 @@ public enum TranscriptionError: LocalizedError, Equatable {
             return "Local whisper binary not found at \(path)."
         case .missingLocalModel(let path):
             return "Local speech-to-text model not found at \(path)."
+        case .missingFFmpegBinary(let path):
+            return "ffmpeg not found at \(path). Install it with: brew install ffmpeg"
         case .missingAPIKey(let name):
             return "Missing API key in \(name)."
         case .invalidAPIResponse:
@@ -40,16 +43,19 @@ public enum TranscriptionError: LocalizedError, Equatable {
 public struct LocalWhisperTranscriber: Transcribing {
     private let binaryURL: URL
     private let modelURL: URL
+    private let ffmpegURL: URL
     private let fileManager: FileManager
 
     public init(
         binaryURL: URL? = nil,
         modelURL: URL? = nil,
+        ffmpegURL: URL? = nil,
         fileManager: FileManager = .default
     ) {
         self.fileManager = fileManager
         self.binaryURL = binaryURL ?? AppDefaults.resolvedLocalWhisperBinaryURL(fileManager: fileManager)
         self.modelURL = modelURL ?? AppDefaults.localModelURL
+        self.ffmpegURL = ffmpegURL ?? AppDefaults.resolvedFFmpegURL(fileManager: fileManager)
     }
 
     public func transcribe(episode: PodcastEpisode, language: String?) throws -> String {
@@ -59,6 +65,14 @@ public struct LocalWhisperTranscriber: Transcribing {
         guard fileManager.fileExists(atPath: modelURL.path) else {
             throw TranscriptionError.missingLocalModel(modelURL.path)
         }
+        guard fileManager.fileExists(atPath: ffmpegURL.path) else {
+            throw TranscriptionError.missingFFmpegBinary(ffmpegURL.path)
+        }
+
+        let wavURL = fileManager.temporaryDirectory
+            .appendingPathComponent("apple-podcasts-transcriber-\(UUID().uuidString).wav")
+        defer { try? fileManager.removeItem(at: wavURL) }
+        try convertToWAV(inputURL: episode.audioFile.url, outputURL: wavURL)
 
         let outputPrefix = fileManager.temporaryDirectory
             .appendingPathComponent("apple-podcasts-transcriber-\(UUID().uuidString)")
@@ -67,7 +81,7 @@ public struct LocalWhisperTranscriber: Transcribing {
         process.executableURL = binaryURL
         var arguments = [
             "-m", modelURL.path,
-            "-f", episode.audioFile.url.path,
+            "-f", wavURL.path,
             "-otxt",
             "-of", outputPrefix.path,
             "-pp"
@@ -97,6 +111,26 @@ public struct LocalWhisperTranscriber: Transcribing {
 
         let data = try Data(contentsOf: transcriptURL)
         return String(data: data, encoding: .utf8) ?? String(decoding: data, as: UTF8.self)
+    }
+
+    private func convertToWAV(inputURL: URL, outputURL: URL) throws {
+        let process = Process()
+        process.executableURL = ffmpegURL
+        process.arguments = [
+            "-i", inputURL.path,
+            "-ar", "16000",
+            "-ac", "1",
+            "-c:a", "pcm_s16le",
+            "-y",
+            outputURL.path
+        ]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try process.run()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else {
+            throw TranscriptionError.processFailed(status: process.terminationStatus, output: "ffmpeg conversion failed")
+        }
     }
 }
 
