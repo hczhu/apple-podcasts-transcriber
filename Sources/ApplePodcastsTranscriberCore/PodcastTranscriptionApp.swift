@@ -137,6 +137,7 @@ public struct PodcastTranscriptionApp {
         var transcribedCount = 0
         var skippedCount = duplicateCount
         var failedCount = 0
+        var transcribedResults: [(title: String, path: String)] = []
 
         output("Found \(episodes.count) episode(s). Processing newest first.")
         if let language = options.language {
@@ -157,6 +158,7 @@ public struct PodcastTranscriptionApp {
                 let text = try transcriber.transcribe(episode: episode, language: options.language)
                 let writtenURL = try transcriptStore.write(text, for: episode.episodeName, date: episode.formattedDate)
                 transcribedCount += 1
+                transcribedResults.append((title: episode.episodeName, path: writtenURL.path))
                 output("Wrote: \(writtenURL.path)")
             } catch {
                 failedCount += 1
@@ -166,6 +168,19 @@ public struct PodcastTranscriptionApp {
         }
 
         output("Done. Transcribed: \(transcribedCount). Skipped: \(skippedCount). Failed: \(failedCount).")
+
+        if !transcribedResults.isEmpty {
+            let titleWidth = transcribedResults.map(\.title.count).max()!
+            let header = "Title".padding(toLength: titleWidth, withPad: " ", startingAt: 0)
+            let separator = String(repeating: "-", count: titleWidth) + "  " + String(repeating: "-", count: 4)
+            output("")
+            output("\(header)  Path")
+            output(separator)
+            for result in transcribedResults {
+                let paddedTitle = result.title.padding(toLength: titleWidth, withPad: " ", startingAt: 0)
+                output("\(paddedTitle)  \(result.path)")
+            }
+        }
     }
 
     private func deleteDownloadedEpisodes(_ groups: [PodcastEpisodeGroup]) {
