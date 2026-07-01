@@ -92,13 +92,38 @@ public struct LocalWhisperTranscriber: Transcribing {
         }
 
         process.arguments = arguments
-        // Let stderr stream directly to the terminal so progress is visible in real-time.
-        process.standardError = FileHandle.standardError
+
+        // Capture stderr; forward only progress percentage lines to avoid model-loading noise.
+        let stderrPipe = Pipe()
+        process.standardError = stderrPipe
+        let stderrDone = DispatchSemaphore(value: 0)
+        DispatchQueue.global(qos: .utility).async {
+            defer { stderrDone.signal() }
+            var buffer = Data()
+            while true {
+                let chunk = stderrPipe.fileHandleForReading.availableData
+                if chunk.isEmpty { break }
+                buffer.append(chunk)
+                while let nl = buffer.firstIndex(of: UInt8(ascii: "\n")) {
+                    let lineData = buffer[..<nl]
+                    buffer.removeSubrange(buffer.startIndex...nl)
+                    if let line = String(data: lineData, encoding: .utf8),
+                       line.contains("progress ="),
+                       let match = line.range(of: #"\d+%"#, options: .regularExpression) {
+                        fputs("\rProgress: \(String(line[match]))   ", stderr)
+                        fflush(stderr)
+                    }
+                }
+            }
+            fputs("\n", stderr)
+            fflush(stderr)
+        }
 
         try process.run()
         activeTranscriptionPID = process.processIdentifier
         defer { activeTranscriptionPID = 0 }
         process.waitUntilExit()
+        stderrDone.wait()
 
         let transcriptURL = outputPrefix.appendingPathExtension("txt")
 
