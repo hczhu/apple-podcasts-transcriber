@@ -69,11 +69,13 @@ public struct LocalWhisperTranscriber: Transcribing {
             throw TranscriptionError.missingFFmpegBinary(ffmpegURL.path)
         }
 
+        print("  Converting audio...")
         let wavURL = fileManager.temporaryDirectory
             .appendingPathComponent("apple-podcasts-transcriber-\(UUID().uuidString).wav")
         defer { try? fileManager.removeItem(at: wavURL) }
         try convertToWAV(inputURL: episode.audioFile.url, outputURL: wavURL)
 
+        print("  Loading model and running speech recognition...")
         let outputPrefix = fileManager.temporaryDirectory
             .appendingPathComponent("apple-podcasts-transcriber-\(UUID().uuidString)")
 
@@ -151,6 +153,7 @@ public struct LocalWhisperTranscriber: Transcribing {
         let process = Process()
         process.executableURL = ffmpegURL
         process.arguments = [
+            "-nostdin",
             "-i", inputURL.path,
             "-ar", "16000",
             "-ac", "1",
@@ -158,6 +161,7 @@ public struct LocalWhisperTranscriber: Transcribing {
             "-y",
             outputURL.path
         ]
+        process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
         try process.run()
