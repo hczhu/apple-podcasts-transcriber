@@ -97,26 +97,34 @@ public struct LocalWhisperTranscriber: Transcribing {
         let stderrPipe = Pipe()
         process.standardError = stderrPipe
         let stderrDone = DispatchSemaphore(value: 0)
+        let readFD = stderrPipe.fileHandleForReading.fileDescriptor
         DispatchQueue.global(qos: .utility).async {
-            defer { stderrDone.signal() }
-            var buffer = Data()
+            defer {
+                fputs("\n", stderr)
+                fflush(stderr)
+                stderrDone.signal()
+            }
+            // Use POSIX read() which blocks until data is available, unlike availableData.
+            var rawBuf = [UInt8](repeating: 0, count: 4096)
+            var line = [UInt8]()
             while true {
-                let chunk = stderrPipe.fileHandleForReading.availableData
-                if chunk.isEmpty { break }
-                buffer.append(chunk)
-                while let nl = buffer.firstIndex(of: UInt8(ascii: "\n")) {
-                    let lineData = buffer[..<nl]
-                    buffer.removeSubrange(buffer.startIndex...nl)
-                    if let line = String(data: lineData, encoding: .utf8),
-                       line.contains("progress ="),
-                       let match = line.range(of: #"\d+%"#, options: .regularExpression) {
-                        fputs("\rProgress: \(String(line[match]))   ", stderr)
-                        fflush(stderr)
+                let n = Darwin.read(readFD, &rawBuf, rawBuf.count)
+                if n <= 0 { break }
+                for byte in rawBuf[..<n] {
+                    // Whisper terminates progress lines with \r; treat both \r and \n as line endings.
+                    if byte == UInt8(ascii: "\r") || byte == UInt8(ascii: "\n") {
+                        if let text = String(bytes: line, encoding: .utf8), !text.isEmpty,
+                           text.contains("progress ="),
+                           let match = text.range(of: #"\d+%"#, options: .regularExpression) {
+                            fputs("\rProgress: \(String(text[match]))   ", stderr)
+                            fflush(stderr)
+                        }
+                        line.removeAll(keepingCapacity: true)
+                    } else {
+                        line.append(byte)
                     }
                 }
             }
-            fputs("\n", stderr)
-            fflush(stderr)
         }
 
         try process.run()
