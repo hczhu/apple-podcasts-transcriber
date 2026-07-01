@@ -93,6 +93,9 @@ public struct LocalWhisperTranscriber: Transcribing {
 
         process.arguments = arguments
 
+        // Suppress verbose per-segment stdout; progress is reported via stderr below.
+        process.standardOutput = FileHandle.nullDevice
+
         // Capture stderr; forward only progress percentage lines to avoid model-loading noise.
         let stderrPipe = Pipe()
         process.standardError = stderrPipe
@@ -100,8 +103,6 @@ public struct LocalWhisperTranscriber: Transcribing {
         let readFD = stderrPipe.fileHandleForReading.fileDescriptor
         DispatchQueue.global(qos: .utility).async {
             defer {
-                fputs("\n", stderr)
-                fflush(stderr)
                 stderrDone.signal()
             }
             // Use POSIX read() which blocks until data is available, unlike availableData.
@@ -116,7 +117,7 @@ public struct LocalWhisperTranscriber: Transcribing {
                         if let text = String(bytes: line, encoding: .utf8), !text.isEmpty,
                            text.contains("progress ="),
                            let match = text.range(of: #"\d+%"#, options: .regularExpression) {
-                            fputs("\rProgress: \(String(text[match]))   ", stderr)
+                            fputs("Progress: \(String(text[match]))\n", stderr)
                             fflush(stderr)
                         }
                         line.removeAll(keepingCapacity: true)
