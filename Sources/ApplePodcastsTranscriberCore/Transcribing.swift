@@ -95,8 +95,8 @@ public struct LocalWhisperTranscriber: Transcribing {
 
         process.arguments = arguments
 
-        // Suppress verbose per-segment stdout; progress is reported via stderr below.
-        process.standardOutput = FileHandle.nullDevice
+        // Stream per-segment stdout directly to the terminal.
+        process.standardOutput = FileHandle.standardOutput
 
         // Capture stderr; forward only progress percentage lines to avoid model-loading noise.
         let stderrPipe = Pipe()
