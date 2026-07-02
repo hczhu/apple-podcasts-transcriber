@@ -10,6 +10,7 @@ public struct PodcastTranscriptionOptions {
     public let language: String?
     public let listOnly: Bool
     public let deleteDownloadedEpisodes: Bool
+    public let deleteAfterTranscription: Bool
 
     public init(
         backend: TranscriptionBackend = .local,
@@ -20,7 +21,8 @@ public struct PodcastTranscriptionOptions {
         episodeFilter: String? = nil,
         language: String? = nil,
         listOnly: Bool = false,
-        deleteDownloadedEpisodes: Bool = false
+        deleteDownloadedEpisodes: Bool = false,
+        deleteAfterTranscription: Bool = true
     ) {
         self.backend = backend
         self.libraryURL = libraryURL
@@ -31,6 +33,7 @@ public struct PodcastTranscriptionOptions {
         self.language = language
         self.listOnly = listOnly
         self.deleteDownloadedEpisodes = deleteDownloadedEpisodes
+        self.deleteAfterTranscription = deleteAfterTranscription
     }
 }
 
@@ -160,6 +163,11 @@ public struct PodcastTranscriptionApp {
                 transcribedCount += 1
                 transcribedResults.append((title: episode.episodeName, path: writtenURL.path))
                 output("Wrote: \(writtenURL.path)")
+                if options.deleteAfterTranscription {
+                    let result = downloadedEpisodeDeleter.delete([episode.audioFile])
+                    for url in result.deletedURLs { output("Deleted: \(url.path)") }
+                    for failure in result.failures { output("Failed to delete: \(failure.url.path) - \(failure.message)") }
+                }
             } catch {
                 failedCount += 1
                 let message = (error as? LocalizedError)?.errorDescription ?? String(describing: error)

@@ -45,6 +45,7 @@ struct CLIOptionsParser {
         var language: String?
         var listOnly = false
         var deleteDownloadedEpisodes = false
+        var deleteAfterTranscription = true
 
         var index = 0
         while index < arguments.count {
@@ -83,6 +84,8 @@ struct CLIOptionsParser {
                 listOnly = true
             case "--delete-downloaded-episodes":
                 deleteDownloadedEpisodes = true
+            case "--no-delete-after-transcription":
+                deleteAfterTranscription = false
             default:
                 throw CLIError.unknownOption(option)
             }
@@ -99,7 +102,8 @@ struct CLIOptionsParser {
             episodeFilter: episodeFilter,
             language: language,
             listOnly: listOnly,
-            deleteDownloadedEpisodes: deleteDownloadedEpisodes
+            deleteDownloadedEpisodes: deleteDownloadedEpisodes,
+            deleteAfterTranscription: deleteAfterTranscription
         )
     }
 
@@ -127,6 +131,8 @@ struct CLIOptionsParser {
           --list                   List episodes without transcribing. Default: false
           --delete-downloaded-episodes
                                    Delete all discovered downloaded episode audio files. Default: false
+          --no-delete-after-transcription
+                                   Keep episode audio files after transcription. Default: delete after transcription
           --check-local-backend    Check local whisper.cpp binary/model setup. Default: false
           --library PATH           Apple Podcasts library path. Default: \(AppDefaults.podcastLibraryRoot.path)
           --output PATH            Transcript output directory. Default: \(AppDefaults.transcriptOutputDirectory.path)
