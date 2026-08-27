@@ -6,7 +6,13 @@ import Foundation
 public var activeTranscriptionPID: pid_t = 0
 
 public protocol Transcribing {
-    func transcribe(episode: PodcastEpisode, language: String?) throws -> String
+    func transcribe(episode: PodcastEpisode, language: String?, prompt: String?) throws -> String
+}
+
+public extension Transcribing {
+    func transcribe(episode: PodcastEpisode, language: String?) throws -> String {
+        try transcribe(episode: episode, language: language, prompt: nil)
+    }
 }
 
 public enum TranscriptionBackend: String {
@@ -58,7 +64,7 @@ public struct LocalWhisperTranscriber: Transcribing {
         self.ffmpegURL = ffmpegURL ?? AppDefaults.resolvedFFmpegURL(fileManager: fileManager)
     }
 
-    public func transcribe(episode: PodcastEpisode, language: String?) throws -> String {
+    public func transcribe(episode: PodcastEpisode, language: String?, prompt: String?) throws -> String {
         guard fileManager.fileExists(atPath: binaryURL.path) else {
             throw TranscriptionError.missingLocalBinary(binaryURL.path)
         }
@@ -91,6 +97,12 @@ public struct LocalWhisperTranscriber: Transcribing {
 
         if let language, !language.isEmpty {
             arguments.append(contentsOf: ["-l", language])
+        }
+
+        if let prompt, !prompt.isEmpty {
+            // Whisper's initial prompt conditions only the first 30s window unless
+            // carried, and names from the show notes recur throughout an episode.
+            arguments.append(contentsOf: ["--prompt", prompt, "--carry-initial-prompt"])
         }
 
         process.arguments = arguments
@@ -221,7 +233,7 @@ public struct OpenAICompatibleTranscriber: Transcribing {
         self.urlSession = urlSession
     }
 
-    public func transcribe(episode: PodcastEpisode, language: String?) throws -> String {
+    public func transcribe(episode: PodcastEpisode, language: String?, prompt: String?) throws -> String {
         guard let apiKey, !apiKey.isEmpty else {
             throw TranscriptionError.missingAPIKey("OPENAI_API_KEY")
         }
@@ -235,7 +247,8 @@ public struct OpenAICompatibleTranscriber: Transcribing {
             boundary: boundary,
             audioURL: episode.audioFile.url,
             model: model,
-            language: language
+            language: language,
+            prompt: prompt
         )
 
         let semaphore = DispatchSemaphore(value: 0)
@@ -267,13 +280,17 @@ public struct OpenAICompatibleTranscriber: Transcribing {
         boundary: String,
         audioURL: URL,
         model: String,
-        language: String?
+        language: String?,
+        prompt: String?
     ) throws -> Data {
         var body = Data()
 
         body.appendFormField(name: "model", value: model, boundary: boundary)
         if let language, !language.isEmpty {
             body.appendFormField(name: "language", value: language, boundary: boundary)
+        }
+        if let prompt, !prompt.isEmpty {
+            body.appendFormField(name: "prompt", value: prompt, boundary: boundary)
         }
         body.appendFileField(
             name: "file",

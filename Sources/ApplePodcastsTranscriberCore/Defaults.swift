@@ -4,6 +4,10 @@ public enum AppDefaults {
     public static let podcastLibraryRoot = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Group Containers/243LU875E5.groups.com.apple.podcasts")
 
+    public static func libraryDatabaseURL(libraryRoot: URL = podcastLibraryRoot) -> URL {
+        libraryRoot.appendingPathComponent("Documents/MTLibrary.sqlite")
+    }
+
     public static let transcriptOutputDirectory = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Documents/Apple Podcast Transcripts")
 

@@ -11,6 +11,7 @@ public struct PodcastTranscriptionOptions {
     public let listOnly: Bool
     public let deleteDownloadedEpisodes: Bool
     public let deleteAfterTranscription: Bool
+    public let useShowNotesPrompt: Bool
 
     public init(
         backend: TranscriptionBackend = .local,
@@ -22,7 +23,8 @@ public struct PodcastTranscriptionOptions {
         language: String? = nil,
         listOnly: Bool = false,
         deleteDownloadedEpisodes: Bool = false,
-        deleteAfterTranscription: Bool = true
+        deleteAfterTranscription: Bool = true,
+        useShowNotesPrompt: Bool = true
     ) {
         self.backend = backend
         self.libraryURL = libraryURL
@@ -34,6 +36,7 @@ public struct PodcastTranscriptionOptions {
         self.listOnly = listOnly
         self.deleteDownloadedEpisodes = deleteDownloadedEpisodes
         self.deleteAfterTranscription = deleteAfterTranscription
+        self.useShowNotesPrompt = useShowNotesPrompt
     }
 }
 
@@ -41,6 +44,7 @@ public struct PodcastTranscriptionApp {
     private let scanner: PodcastLibraryScanner
     private let metadataReader: EpisodeMetadataReading
     private let downloadedEpisodeDeleter: DownloadedEpisodeDeleter
+    private let showNotesReader: ShowNotesReading
     private let makeTranscriber: (TranscriptionBackend) -> Transcribing
     private let output: (String) -> Void
 
@@ -48,6 +52,7 @@ public struct PodcastTranscriptionApp {
         scanner: PodcastLibraryScanner = PodcastLibraryScanner(),
         metadataReader: EpisodeMetadataReading = FileEpisodeMetadataReader(),
         downloadedEpisodeDeleter: DownloadedEpisodeDeleter = DownloadedEpisodeDeleter(),
+        showNotesReader: ShowNotesReading = MTLibraryShowNotesReader(),
         makeTranscriber: @escaping (TranscriptionBackend) -> Transcribing = { backend in
             switch backend {
             case .local:
@@ -61,6 +66,7 @@ public struct PodcastTranscriptionApp {
         self.scanner = scanner
         self.metadataReader = metadataReader
         self.downloadedEpisodeDeleter = downloadedEpisodeDeleter
+        self.showNotesReader = showNotesReader
         self.makeTranscriber = makeTranscriber
         self.output = output
     }
@@ -158,7 +164,12 @@ public struct PodcastTranscriptionApp {
 
             do {
                 output("Transcribing: \(episode.episodeName)")
-                let text = try transcriber.transcribe(episode: episode, language: options.language)
+                let prompt = options.useShowNotesPrompt ? showNotesPrompt(for: episode, options: options) : nil
+                let text = try transcriber.transcribe(
+                    episode: episode,
+                    language: options.language,
+                    prompt: prompt
+                )
                 let writtenURL = try transcriptStore.write(text, for: episode.episodeName, date: episode.formattedDate)
                 transcribedCount += 1
                 transcribedResults.append((title: episode.episodeName, path: writtenURL.path))
@@ -189,6 +200,23 @@ public struct PodcastTranscriptionApp {
                 output("\(paddedTitle)  \(result.path)")
             }
         }
+    }
+
+    /// Builds a Whisper initial prompt from the episode's show notes so that guest
+    /// names, company names, and jargon are spelled the way the feed spells them.
+    private func showNotesPrompt(for episode: PodcastEpisode, options: PodcastTranscriptionOptions) -> String? {
+        guard let notes = showNotesReader.showNotes(for: episode, libraryURL: options.libraryURL),
+              let prompt = TranscriptionPromptBuilder.prompt(from: notes) else {
+            output("  No show notes found; transcribing without a prompt.")
+            return nil
+        }
+
+        output("  Show notes prompt (\(prompt.count) chars): \(preview(prompt))")
+        return prompt
+    }
+
+    private func preview(_ text: String, limit: Int = 80) -> String {
+        text.count <= limit ? text : String(text.prefix(limit)) + "..."
     }
 
     private func deleteDownloadedEpisodes(_ groups: [PodcastEpisodeGroup]) {
