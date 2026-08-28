@@ -46,7 +46,13 @@ public struct MTLibraryShowNotesReader: ShowNotesReading {
             return notes
         }
 
-        return query(database, sql: Self.titleQuery, argument: episode.episodeName)
+        if let notes = query(database, sql: Self.titleQuery, argument: episode.episodeName) {
+            return notes
+        }
+
+        // Feeds often prefix the ID3 title with the show name ("Show: Episode"),
+        // so fall back to the longest stored title the episode name ends with.
+        return query(database, sql: Self.titleSuffixQuery, argument: episode.episodeName)
     }
 
     private static let selectClause = """
@@ -65,6 +71,14 @@ public struct MTLibraryShowNotesReader: ShowNotesReading {
 
     WHERE e.ZTITLE = ?1 COLLATE NOCASE
     ORDER BY (e.ZITEMDESCRIPTIONWITHOUTHTML IS NULL), e.ZPUBDATE DESC
+    LIMIT 1
+    """
+
+    /// The length guard keeps very short stored titles from matching by accident.
+    private static let titleSuffixQuery = selectClause + """
+
+    WHERE length(e.ZTITLE) >= 8 AND ?1 LIKE '%' || e.ZTITLE
+    ORDER BY (e.ZITEMDESCRIPTIONWITHOUTHTML IS NULL), length(e.ZTITLE) DESC, e.ZPUBDATE DESC
     LIMIT 1
     """
 
