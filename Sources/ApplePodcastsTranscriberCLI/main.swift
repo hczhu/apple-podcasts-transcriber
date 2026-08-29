@@ -46,6 +46,7 @@ struct CLIOptionsParser {
         var listOnly = false
         var deleteDownloadedEpisodes = false
         var deleteAfterTranscription = true
+        var useShowNotesPrompt = true
 
         var index = 0
         while index < arguments.count {
@@ -86,6 +87,8 @@ struct CLIOptionsParser {
                 deleteDownloadedEpisodes = true
             case "--no-delete-after-transcription":
                 deleteAfterTranscription = false
+            case "--no-show-notes-prompt":
+                useShowNotesPrompt = false
             default:
                 throw CLIError.unknownOption(option)
             }
@@ -103,7 +106,8 @@ struct CLIOptionsParser {
             language: language,
             listOnly: listOnly,
             deleteDownloadedEpisodes: deleteDownloadedEpisodes,
-            deleteAfterTranscription: deleteAfterTranscription
+            deleteAfterTranscription: deleteAfterTranscription,
+            useShowNotesPrompt: useShowNotesPrompt
         )
     }
 
@@ -133,6 +137,8 @@ struct CLIOptionsParser {
                                    Delete all discovered downloaded episode audio files. Default: false
           --no-delete-after-transcription
                                    Keep episode audio files after transcription. Default: delete after transcription
+          --no-show-notes-prompt   Do not seed Whisper with the episode's show notes.
+                                   Default: use show notes as the initial prompt
           --check-local-backend    Check local whisper.cpp binary/model setup. Default: false
           --library PATH           Apple Podcasts library path. Default: \(AppDefaults.podcastLibraryRoot.path)
           --output PATH            Transcript output directory. Default: \(AppDefaults.transcriptOutputDirectory.path)

@@ -121,6 +121,25 @@ Language codes are passed to the local `whisper-cli` backend and to the
 OpenAI-compatible transcription API. Use ISO-639-style codes such as `en`,
 `zh`, `ja`, or `es`.
 
+Show notes as a transcription prompt:
+
+By default each episode's show notes are read from the Apple Podcasts library
+(`<library>/Documents/MTLibrary.sqlite`) and passed to the model as an *initial
+prompt* — the text Whisper conditions on before decoding. This biases spelling
+toward the proper nouns the feed itself uses (guest names, companies, jargon),
+which are the words Whisper most often gets wrong. The prompt is capped at 200
+estimated tokens, below Whisper's 224-token limit, and is carried across
+windows so it applies to the whole episode rather than only the first 30
+seconds. Opt out with:
+
+```sh
+swift run apple-podcasts-transcriber --no-show-notes-prompt
+```
+
+Episodes are matched to their show notes by the audio file name recorded in the
+library database, falling back to an episode-title match. When no notes are
+found the episode is transcribed without a prompt.
+
 Process only the newest five episodes:
 
 ```sh
